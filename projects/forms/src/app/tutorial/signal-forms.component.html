@@ -1,0 +1,1800 @@
+<div class="doc">
+  <!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
+  <header class="doc-header">
+    <button
+      type="button"
+      class="doc-header__burger"
+      aria-label="Toggle navigation"
+      [attr.aria-expanded]="mobileOpen()"
+      (click)="mobileOpen.set(!mobileOpen())"
+    >
+      <span class="burger-bar"></span>
+      <span class="burger-bar"></span>
+      <span class="burger-bar"></span>
+    </button>
+    <a class="doc-header__brand" href="#top" (click)="closeMobile()">
+      <span class="doc-header__logo" aria-hidden="true">ƒ</span>
+      <span class="doc-header__title">Signal Forms</span>
+    </a>
+    <span class="doc-header__meta">
+      <span class="version-badge">Angular 22 · stable</span>
+      <span class="doc-header__subtitle">An interactive workshop + reference</span>
+    </span>
+  </header>
+
+  <div class="doc-body">
+    <!-- ═══════════════════════════ SIDE NAV ═══════════════════════════ -->
+    <aside class="doc-sidebar" [class.doc-sidebar--open]="mobileOpen()" aria-label="Table of contents">
+      @if (mobileOpen()) {
+        <button
+          type="button"
+          class="doc-sidebar__backdrop"
+          (click)="closeMobile()"
+          aria-label="Close navigation"
+        ></button>
+      }
+
+      <div class="doc-sidebar__inner">
+        <div class="doc-search">
+          <label class="sr-only" for="doc-search">Search the tutorial</label>
+          <input
+            id="doc-search"
+            type="search"
+            placeholder="Search sections…"
+            [(ngModel)]="search"
+            (keydown.escape)="search.set('')"
+          />
+        </div>
+
+        @if (searching()) {
+          <nav class="doc-search-results" aria-label="Search results">
+            @for (link of searchResults(); track link.id) {
+              <a class="nav-link" [href]="'#' + link.id" (click)="search.set(''); closeMobile()">
+                {{ link.title }}
+              </a>
+            } @empty {
+              <p class="muted doc-search-results__empty">No matching sections.</p>
+            }
+          </nav>
+        }
+
+        @if (!searching()) {
+          <nav class="doc-nav" aria-label="Sections">
+            @for (node of nav; track $index) {
+              @if (node.type === 'group') {
+                <details
+                  class="nav-group"
+                  [attr.open]="groupOpen(node.title) ? '' : null"
+                  (toggle)="onGroupToggle(node.title, $event)"
+                >
+                  <summary class="nav-group__title">{{ node.title }}</summary>
+                  <ul class="nav-group__list">
+                    @for (link of node.children; track $index) {
+                      @if (link.type === 'link') {
+                        <li>
+                          <a
+                            class="nav-link"
+                            [class.is-active]="activeSection() === link.id"
+                            [href]="'#' + link.id"
+                            (click)="closeMobile()"
+                          >
+                            <span class="nav-link__text">{{ link.title }}</span>
+                            @if (link.badge) {
+                              <span class="nav-badge nav-badge--{{ link.badge }}">{{ link.badge }}</span>
+                            }
+                          </a>
+                        </li>
+                      }
+                    }
+                  </ul>
+                </details>
+              }
+            }
+          </nav>
+        }
+
+        <div class="doc-sidebar__footer">
+          <p>
+            Built against <code>@angular/forms</code> <strong>22.1</strong>.
+            <br />Stable since v22.0.
+          </p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ═══════════════════════════ MAIN ═══════════════════════════ -->
+    <main class="doc-main" id="top" appScrollSpy (activeSection)="setActive($event)">
+      <div class="doc-main__inner">
+        <section class="doc-hero" data-section="hero">
+          <p class="doc-hero__eyebrow">Angular Signal Forms · interactive tutorial</p>
+          <h1>Signal Forms</h1>
+          <p class="doc-hero__lede">
+            A developer documentation site <em>and</em> a hands-on workshop for designing,
+            implementing and shipping <strong>Signal Forms</strong> in real-world and enterprise
+            Angular applications.
+          </p>
+          <div class="doc-hero__badges">
+            <span class="version-badge">Stable · v22.0+</span>
+            <span class="version-badge">25+ sections</span>
+            <span class="version-badge">Live demos</span>
+          </div>
+          <div class="doc-callout doc-callout--info">
+            <strong>Status note.</strong> Signal Forms were a <em>developer preview</em> through
+            Angular v21 and graduated to <strong>stable</strong>, production-ready APIs in
+            <strong>Angular v22</strong> (<code>@publicApi 22.0</code>). Everything here targets the
+            stable v22 API exported from <code>@angular/forms/signals</code> — which is intentionally
+            different from the v19–v21 preview API (<code>field()</code>, <code>validators()</code>,
+            …), so older search results will not match. Anything still experimental (e.g. WebMCP
+            tool registration) is labeled as such.
+          </div>
+          <div class="doc-callout doc-callout--tip">
+            <strong>How to use this guide.</strong> Read top to bottom — it is a curriculum, not a
+            reference dump. Sections build on each other; each ends with an <em>exercise</em> and a
+            collapsible solution. Use the side navigation to jump around, and the 🔗 icon next to any
+            heading to copy a deep link.
+          </div>
+        </section>
+
+        <!-- ═══════════════════════ GETTING STARTED ═══════════════════════ -->
+
+        <section id="mental-model" data-section="mental-model" class="doc-section">
+          <div class="doc-heading-row">
+            <h2 class="doc-h2">Mental Model</h2>
+            <app-copy-link section="mental-model" />
+          </div>
+
+          <p>
+            Signal Forms are a <strong>third way to build forms in Angular</strong>, alongside
+            template-driven and reactive forms. They replace the imperative control objects of
+            Reactive Forms with a <em>reactive, declarative</em> model built directly on Angular
+            Signals.
+          </p>
+
+          <h3>What is a Signal Form?</h3>
+          <p>
+            A Signal Form is a <strong>field tree</strong> wrapped around an ordinary
+            <strong>model signal</strong>. Your data lives in a <code>WritableSignal</code>; the form
+            mirrors that shape as a tree of callable <em>field accessors</em>; a declarative
+            <em>schema</em> attaches validation and behavior to each field; and the
+            <code>[formField]</code> directive binds those fields to DOM controls.
+          </p>
+
+          <app-code-block [code]="samples.mentalSignalForm" lang="ts" filename="mental-model.ts" />
+
+          <h3>Why Angular introduced them</h3>
+          <p>
+            Reactive Forms solved the "big application" problem of template-driven forms — typed
+            control trees, validation, fine-grained state — but with real costs:
+          </p>
+          <ul>
+            <li>
+              <strong>Two copies of the data.</strong> A <code>FormGroup</code> duplicates your
+              model, and you spend your life syncing them with
+              <code>setValue</code>/<code>patchValue</code>.
+            </li>
+            <li>
+              <strong>Imperative glue.</strong> Conditional validation, cross-field rules and
+              disabled logic are assembled with <code>valueChanges</code> subscriptions and
+              <code>updateValueAndValidity</code> calls scattered through components.
+            </li>
+            <li>
+              <strong>Subscription tax.</strong> Every read is a stream; every derived value needs a
+              subscription, an <code>unsubscribe</code>, and a hand-rolled state update.
+            </li>
+            <li>
+              <strong>Weak typing.</strong> <code>AbstractControl</code>-based access hides the data
+              shape behind casts; strong typing for reactive forms shipped late and still lives
+              mainly in <code>FormControl&lt;T&gt;</code> boilerplate.
+            </li>
+          </ul>
+
+          <app-code-block [code]="samples.mentalRfEquivalent" lang="ts" filename="reactive-forms.ts" />
+
+          <h3>What actually changes conceptually</h3>
+          <p>The mental model shifts in four ways:</p>
+
+          <table class="doc-table">
+            <thead>
+              <tr><th>Reactive Forms</th><th>Signal Forms</th><th>Why it matters</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>FormControl</code></td>
+                <td>field accessor → <code>field()</code></td>
+                <td>State is read as a signal, not an object to subscribe to.</td>
+              </tr>
+              <tr>
+                <td><code>FormGroup</code> / <code>FormArray</code></td>
+                <td>the field tree over the model</td>
+                <td>No duplicate data — one model signal is the source of truth.</td>
+              </tr>
+              <tr>
+                <td><code>valueChanges</code> / <code>statusChanges</code></td>
+                <td><code>field().value()</code>, <code>computed()</code>, <code>effect()</code></td>
+                <td>Derivation is declarative and glitch-free; no subscriptions to manage.</td>
+              </tr>
+              <tr>
+                <td><code>validators: [...]</code> on controls</td>
+                <td>schema rules: <code>required(path)</code>, <code>validate(path, fn)</code></td>
+                <td>Rules are declarative, composable and reusable across forms.</td>
+              </tr>
+              <tr>
+                <td><code>setValue()</code> / <code>patchValue()</code></td>
+                <td><code>model.set()</code> / <code>model.update()</code> (or <code>field().value.set()</code>)</td>
+                <td>Updating the data updates the form; updating the form updates the data.</td>
+              </tr>
+              <tr>
+                <td><code>Validators.required</code> etc.</td>
+                <td><code>required</code>, <code>email</code>, <code>min</code>, <code>minLength</code>…</td>
+                <td>Built-in validators are standalone schema rules with user-facing messages.</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h3>How form state is represented</h3>
+          <p>
+            Every node of the field tree is a callable accessor. Calling it returns a
+            <code>FieldState</code> — a snapshot of <em>that field's</em> reactive state:
+            <code>value</code>, <code>touched</code>, <code>dirty</code>, <code>valid</code>,
+            <code>invalid</code>, <code>pending</code>, <code>errors</code>, and more. The root field
+            aggregates its descendants, so <code>form().valid()</code> folds the whole tree up.
+          </p>
+
+          <app-code-block [code]="samples.mentalModelDiagram" lang="diagram" filename="mental-model.diagram" />
+
+          <h3>What becomes simpler</h3>
+          <ul>
+            <li><strong>Data sync</strong> — the form <em>is</em> the model signal; nothing to keep in step.</li>
+            <li><strong>Typed access</strong> — <code>form.personal.firstName</code> is typed end to end.</li>
+            <li><strong>Reactive reads</strong> — <code>computed()</code> over fields, no subscriptions.</li>
+            <li><strong>Declarative rules</strong> — validation, disabled, readonly, hidden as schema.</li>
+            <li><strong>Async validation</strong> — debounced and pending-aware out of the box.</li>
+            <li><strong>Submission</strong> — server errors map back onto fields directly.</li>
+          </ul>
+
+          <h3>What does NOT become simpler</h3>
+          <ul>
+            <li><strong>Architecture</strong> — you still need to decide where the model lives and who owns it.</li>
+            <li><strong>Large-form layout</strong> — splitting templates into section components is still on you.</li>
+            <li><strong>Third-party control ecosystems</strong> — most Angular UI libraries still speak
+              <code>ControlValueAccessor</code>; Signal Forms interoperate, but some controls need a wrapper.</li>
+            <li><strong>Migration</strong> — converting a large reactive form is a rewrite of logic, not a find/replace.</li>
+          </ul>
+
+          <div class="doc-callout doc-callout--info">
+            <strong>When Signal Forms are appropriate:</strong> most new forms, complex validation,
+            dynamic/nested data, API-backed editors, anything you'd reach for Reactive Forms for.
+            <br /><strong>When Reactive Forms may still be better:</strong> legacy codebases fully
+            invested in the Reactive Forms ecosystem, teams migrating a stable form they never touch,
+            or strict requirements for <code>AbstractControl</code> interop with third-party controls.
+          </div>
+
+          <details class="exercise">
+            <summary><strong>Exercise</strong> — make the mental model concrete</summary>
+            <p>
+              Without running code, predict the output. Given
+              <code>const f = form(signal(&#123; a: 1, b: '' &#125;))</code>:
+            </p>
+            <ul>
+              <li>What does <code>f.a()</code> return?</li>
+              <li>After <code>f.a().value.set(5)</code>, what is the model signal's value?</li>
+              <li>Why is <code>f.a().value</code> (without calling it) not the value?</li>
+            </ul>
+            <details class="solution">
+              <summary>Show solution</summary>
+              <ul>
+                <li><code>f.a()</code> returns the <code>FieldState</code> of <code>a</code>.</li>
+                <li>The model signal now holds <code>&#123; a: 5, b: '' &#125;</code> — the form writes back.</li>
+                <li>Because it is a <em>signal</em> — read it with <code>f.a().value()</code>.</li>
+              </ul>
+            </details>
+          </details>
+
+          <app-prev-next section="mental-model" />
+        </section>
+
+        <section id="first-signal-form" data-section="first-signal-form" class="doc-section">
+          <div class="doc-heading-row">
+            <h2 class="doc-h2">First Signal Form</h2>
+            <app-copy-link section="first-signal-form" />
+          </div>
+
+          <p>
+            We'll build a small <strong>User Profile Form</strong> — <code>name</code>,
+            <code>email</code>, <code>age</code> — step by step. This is the same code running live
+            below, so experiment with it: try submitting empty, then fill it in and watch every state
+            signal update.
+          </p>
+
+          <app-live-profile-demo />
+
+          <h3>Step 1 — The form model</h3>
+          <p>
+            Start with an interface and one writable signal. There is no
+            <code>FormGroup</code>; the signal <em>is</em> the data. This is the whole point — the
+            form adds behavior, not a second copy of the state.
+          </p>
+          <app-code-block [code]="samples.firstStep1" lang="ts" filename="user-profile.ts" />
+          <p>
+            <strong>Why it works:</strong> <code>form()</code> reads the shape of the model signal and
+            builds a field tree that mirrors it. When the signal changes, the tree follows.
+          </p>
+
+          <h3>Step 2 — Signal-based form state</h3>
+          <p>
+            Wrap the model with <code>form(model, schemaFn)</code>. The second argument is a
+            <em>schema function</em> that declares rules — here, validation — per field using
+            <em>paths</em> into the model shape.
+          </p>
+          <app-code-block [code]="samples.firstStep2" lang="ts" filename="user-profile.ts" />
+          <p>
+            <strong>What is reactive:</strong> every rule is registered as a reactive dependency on
+            the field's value. Nothing is computed until you read it; nothing is recomputed unless its
+            inputs changed.
+          </p>
+
+          <h3>Step 3 — Field bindings</h3>
+          <p>
+            The <code>[formField]</code> directive binds a field to a DOM control: it pushes value
+            changes into the field, pushes field state back into the DOM, and marks the field touched
+            on blur. The <code>[formRoot]</code> directive wires the <code>&lt;form&gt;</code> element
+            to submission and disables native browser validation.
+          </p>
+          <app-code-block [code]="samples.firstStep3" lang="html" filename="user-profile.html" />
+          <p>
+            <strong>What Angular is doing:</strong> for a native <code>&lt;input&gt;</code> the
+            directive attaches an input listener and a renderer-driven write-back — no
+            <code>ControlValueAccessor</code> needed, no two-way binding boilerplate.
+          </p>
+
+          <h3>Step 4 — Reading values</h3>
+          <app-code-block [code]="samples.firstStep4" lang="ts" filename="user-profile.ts" />
+          <p>
+            Notice the pattern: a <em>field</em> is called to reach its state, and state properties
+            are signals that you call to read. This consistency is what makes
+            <code>computed()</code> and templates Just Work.
+          </p>
+
+          <h3>Step 5 — Updating values</h3>
+          <app-code-block [code]="samples.firstStep5" lang="ts" filename="user-profile.ts" />
+          <p>
+            <strong>Why it works:</strong> the field's <code>value</code> is a writable signal that
+            writes back into the model. Bulk replacement goes straight to the model — the tree
+            re-wraps the new object. Both routes keep validation, dirty and touched in sync.
+          </p>
+
+          <h3>Step 6 — Validation</h3>
+          <app-code-block [code]="samples.firstStep6" lang="ts" filename="user-profile.ts" />
+          <p>
+            Validation is <em>declared in the schema</em>, not assembled in the component. Each rule
+            can carry a user-facing <code>message</code> — so the template renders
+            <code>err.message</code> directly and you never translate error codes in the UI.
+          </p>
+
+          <h3>Step 7 — Error display</h3>
+          <app-code-block [code]="samples.firstStep7" lang="html" filename="user-profile.html" />
+          <p>
+            Errors are per-field signals. The same <code>errors()</code> list drives
+            <code>aria-invalid</code>, <code>aria-describedby</code> and the visible message — one
+            source of truth for both screen readers and sighted users.
+          </p>
+
+          <h3>Step 8 — Submission</h3>
+          <app-code-block [code]="samples.firstStep8" lang="ts" filename="user-profile.ts" />
+          <p>
+            Submission is declared once, in the form options. <code>[formRoot]</code> intercepts the
+            native submit event, marks the whole tree touched (so errors appear), runs the action
+            only when the form isn't invalid, guards against concurrent submits, and exposes progress
+            via <code>form().submitting()</code>.
+          </p>
+
+          <app-code-block [code]="samples.firstIncremental" lang="ts" filename="user-profile.ts" />
+
+          <div class="doc-callout doc-callout--tip">
+            <strong>Production tip.</strong> Give every form a stable <code>name</code> in its options
+            (<code>&#123; name: 'profile' &#125;</code>). The forms system uses it to generate
+            <code>name</code> attributes for fields, which matters for form autofill and
+            accessibility.
+          </div>
+
+          <details class="exercise">
+            <summary><strong>Exercise</strong> — extend the profile form</summary>
+            <ul>
+              <li>Add a <code>bio</code> field with <code>maxLength(…, 280)</code> and a counter.</li>
+              <li>Show the counter next to the textarea, derived with <code>computed()</code>.</li>
+              <li>Disable the submit button while the form is <code>pending()</code> or
+                <code>submitting()</code>.</li>
+            </ul>
+            <details class="solution">
+              <summary>Show solution</summary>
+              <app-code-block [code]="samples.exerciseNotes" lang="ts" filename="solution.ts" />
+              <p>
+                Add <code>maxLength(p.bio, 280)</code> to the schema, then a
+                <code>computed</code> reading <code>profileForm.bio().value().length</code> for the
+                counter, and bind <code>[disabled]="profileForm().submitting() || profileForm().pending()"</code>
+                on the submit button.
+              </p>
+            </details>
+          </details>
+
+          <app-prev-next section="first-signal-form" />
+        </section>
+
+        <section id="anatomy-of-signal-form" data-section="anatomy-of-signal-form" class="doc-section">
+          <div class="doc-heading-row">
+            <h2 class="doc-h2">Anatomy of a Signal Form</h2>
+            <app-copy-link section="anatomy-of-signal-form" />
+          </div>
+
+          <p>
+            Before going deeper, get the five layers of the API straight. Every Signal Form you write
+            is a composition of these pieces:
+          </p>
+
+          <app-code-block [code]="samples.anatomyLayers" lang="diagram" filename="anatomy.diagram" />
+
+          <app-code-block [code]="samples.anatomyApi" lang="ts" filename="anatomy.ts" />
+
+          <h3>The vocabulary, asked and answered</h3>
+
+          <table class="doc-table">
+            <thead>
+              <tr><th>API</th><th>What it is</th><th>Why it exists</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>form(model, schema?, options?)</code></td>
+                <td>Creates the field tree over a writable model signal.</td>
+                <td>One call per logical form; the model stays the single source of truth.</td>
+              </tr>
+              <tr>
+                <td><code>FieldTree</code></td>
+                <td>The callable tree that mirrors the model's shape.</td>
+                <td>Typed, reactive navigation of form state without control objects.</td>
+              </tr>
+              <tr>
+                <td><code>Field</code> / <code>field()</code></td>
+                <td>A node accessor; calling it returns that node's <code>FieldState</code>.</td>
+                <td>Uniform read pattern — same shape at the root, a nested group, or an array item.</td>
+              </tr>
+              <tr>
+                <td><code>FieldState</code></td>
+                <td>Reactive snapshot: value, errors, touched, dirty, valid, pending…</td>
+                <td>Everything you need to render and react, as signals.</td>
+              </tr>
+              <tr>
+                <td><code>schema()</code> / schema fn</td>
+                <td>Declarative rules bound to paths: validation, disabled, readonly, hidden, debounce, metadata.</td>
+                <td>Behavior lives with the domain shape, not inside components.</td>
+              </tr>
+              <tr>
+                <td><code>[formField]</code></td>
+                <td>Directive binding a field to a native input or custom control.</td>
+                <td>Bridges the tree to the DOM; replaces CVA for new code.</td>
+              </tr>
+              <tr>
+                <td><code>[formRoot]</code></td>
+                <td>Directive on a <code>&lt;form&gt;</code> handling submit + novalidate.</td>
+                <td>Turns the native form element into a submission pipeline.</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h3>Where does each piece live?</h3>
+          <ul>
+            <li><strong>Model signal</strong> — owned by the component (or a facade) that owns the data.</li>
+            <li><strong>Field tree</strong> — created by <code>form()</code>; never constructed by hand.</li>
+            <li><strong>Schema</strong> — its own file (<code>*.schema.ts</code>) so it is unit-testable.</li>
+            <li><strong>Directives</strong> — used in templates only.</li>
+          </ul>
+
+          <div class="doc-callout doc-callout--info">
+            <strong>Common mistake.</strong> Trying to build the field tree manually (creating "fields"
+            yourself) as with the old preview API. In v22 there is no <code>field()</code> constructor —
+            the tree is derived from the model shape plus schema rules. If you need a field the model
+            doesn't have, change the model (or make it optional/conditional).
+          </div>
+
+          <details class="exercise">
+            <summary><strong>Exercise</strong> — name the layers</summary>
+            <p>For this snippet, identify the layer each part belongs to:</p>
+            <app-code-block [code]="samples.firstStep2" lang="ts" filename="exercise.ts" />
+            <details class="solution">
+              <summary>Show solution</summary>
+              <ul>
+                <li><code>profileModel</code> → model layer.</li>
+                <li><code>form(...)</code> → creates the field tree.</li>
+                <li><code>required / email / min</code> → schema rules layer.</li>
+                <li><code>p.name</code>, <code>p.email</code>, <code>p.age</code> → paths (schema layer).</li>
+                <li><code>this.profileForm</code> → the field tree, later used by <code>[formField]</code>.</li>
+              </ul>
+            </details>
+          </details>
+
+          <app-prev-next section="anatomy-of-signal-form" />
+        </section>
+
+        <!-- ═══════════════════════ CORE CONCEPTS ═══════════════════════ -->
+
+        <section id="form-model" data-section="form-model" class="doc-section">
+          <div class="doc-heading-row">
+            <h2 class="doc-h2">The Form Model</h2>
+            <app-copy-link section="form-model" />
+          </div>
+
+          <h3>What is it?</h3>
+          <p>
+            The form model is the <code>WritableSignal</code> you pass to <code>form()</code>. The
+            field tree does not copy it — it <em>wraps</em> it. Reads and writes pass straight through
+            to the signal.
+          </p>
+
+          <h3>Why does it exist?</h3>
+          <p>
+            Reactive Forms keep a parallel object graph, which is the root of sync bugs.
+            Signal Forms invert this: your data object <em>is</em> the form's backing store. Loading,
+            editing and saving all operate on one value.
+          </p>
+
+          <h3>How does it work?</h3>
+          <app-code-block [code]="samples.modelTruth" lang="ts" filename="form-model.ts" />
+
+          <h3>Loading data into the form</h3>
+          <p>Populating after a GET is a single write to the model signal:</p>
+          <app-code-block [code]="samples.modelReplace" lang="ts" filename="form-model.ts" />
+
+          <div class="doc-callout doc-callout--tip">
+            <strong>Production tip.</strong> Keep the model signal and the API DTO types separate.
+            Map between <code>Dto</code> and your <code>Employee</code> model in an explicit mapper —
+            never let API field names leak into the form schema. (More in the API section.)
+          </div>
+
+          <div class="doc-callout doc-callout--info">
+            <strong>When to use it:</strong> always — every Signal Form has exactly one model signal.
+            <br /><strong>When NOT to use it:</strong> don't create multiple signals per field and
+            hand-sync them; that's re-inventing the FieldState. And don't keep a separate "form
+            model" <em>and</em> an "app model" for the same data without an explicit bridge.
+          </div>
+
+          <app-prev-next section="form-model" />
+        </section>
+
+        <section id="fields" data-section="fields" class="doc-section">
+          <div class="doc-heading-row">
+            <h2 class="doc-h2">Fields &amp; Field Trees</h2>
+            <app-copy-link section="fields" />
+          </div>
+
+          <h3>What is it?</h3>
+          <p>
+            A <code>FieldTree</code> is a tree of <em>field accessors</em> whose shape mirrors your
+            model. Primitives become leaf fields; objects become group fields; arrays become array
+            fields you can iterate. It is callable — <code>form()</code> gives you the root's
+            <code>FieldState</code>, <code>form.name()</code> the leaf's.
+          </p>
+
+          <h3>Why does it exist?</h3>
+          <p>
+            You navigate the tree exactly the way you'd navigate your data object — typed, with no
+            <code>get('address.city')</code> strings and no casts. Nesting is not a special case; a
+            group field behaves like any other field, so sections compose recursively.
+          </p>
+
+          <h3>How does it work?</h3>
+          <app-code-block [code]="samples.fieldsNested" lang="ts" filename="fields.ts" />
+
+          <p>
+            Accessing a nested property like <code>p.personal.firstName</code> inside a schema
+            returns a <em>path</em> — a lightweight reference to a location, valid before the form
+            exists. Rules bind to paths; the field tree resolves them at runtime.
+          </p>
+
+          <div class="doc-callout doc-callout--info">
+            <strong>When to use it:</strong> always — it's the primary way to touch form state.
+            <br /><strong>When NOT to use it:</strong> don't keep references to a <em>path</em>
+            outside the schema function and expect live state — paths are structural, not reactive.
+            Use <code>fieldTreeOf(path)</code> or the actual field accessor once the form exists.
+          </div>
+
+          <app-prev-next section="fields" />
+        </section>
+
+        <section id="field-state" data-section="field-state" class="doc-section">
+          <div class="doc-heading-row">
+            <h2 class="doc-h2">Field State</h2>
+            <app-copy-link section="field-state" />
+          </div>
+
+          <h3>What is it?</h3>
+          <p>
+            Calling a field accessor returns its <code>FieldState</code>: reactive signals for the
+            value and every status flag, plus methods to interact with the field.
+          </p>
+
+          <h3>Why does it exist?</h3>
+          <p>
+            Rendering a form is 95% reading state — error messages, disabled flags, validity — and
+            <code>FieldState</code> gives you all of it as signals, uniform across leaf fields,
+            groups and array items.
+          </p>
+
+          <h3>The full surface</h3>
+          <app-code-block [code]="samples.fieldStateTable" lang="ts" filename="field-state.ts" />
+
+          <h3>How does it work?</h3>
+          <app-code-block [code]="samples.fieldStateExample" lang="ts" filename="field-state.ts" />
+
+          <p>
+            Note the subtlety: <code>valid()</code> is <code>true</code> only when there are
+            <em>no errors and no pending validators</em>, while <code>invalid()</code> is
+            <code>true</code> when there are errors regardless of pending work. A field can be
+            simultaneously <code>invalid === false</code> and <code>valid === false</code> while an
+            async check is running. Use <code>pending()</code> for that case.
+          </p>
+
+          <div class="doc-callout doc-callout--info">
+            <strong>When to use it:</strong> everywhere you read or react to form state — templates,
+            computed values, effects, guards.
+            <br /><strong>When NOT to use it:</strong> don't mirror field state into your own
+            signals. If you find yourself writing <code>dirty = signal(false)</code> next to a form,
+            stop — read <code>field().dirty()</code> instead.
+          </div>
+
+          <details class="exercise">
+            <summary><strong>Exercise</strong> — getError vs errors</summary>
+            <p>
+              Given an email field with <code>required</code> and <code>email</code> rules, what does
+              <code>field().getError('email')</code> return when the field is empty? When it holds
+              <code>"not-an-email"</code>?
+            </p>
+            <details class="solution">
+              <summary>Show solution</summary>
+              <p>
+                Empty → <code>undefined</code> (only the <code>required</code> error exists, and note
+                the email rule skips empty values). <code>"not-an-email"</code> → the
+                <code>EmailValidationError</code> instance. Use <code>getError(kind)</code> when you
+                need the typed error; use <code>errors()</code> when you render the list.
+              </p>
+            </details>
+          </details>
+
+          <app-prev-next section="field-state" />
+        </section>
+
+        <section id="derived-state" data-section="derived-state" class="doc-section">
+          <div class="doc-heading-row">
+            <h2 class="doc-h2">Derived State</h2>
+            <app-copy-link section="derived-state" />
+          </div>
+
+          <h3>What is it?</h3>
+          <p>
+            Anything computed from one or more field values: a full name, a counter, a formatted
+            value, a permissions list, a tax bracket. Signal Forms encourage expressing these with
+            <code>computed()</code> over field signals.
+          </p>
+
+          <h3>Why does it exist?</h3>
+          <p>
+            In Reactive Forms, derived UI state meant subscribing to <code>valueChanges</code>,
+            storing the result in another property, and unsubscribing. Signals make derivation lazy,
+            memoized and glitch-free — the same value can be read by many consumers with one
+            computation.
+          </p>
+
+          <h3>How does it work?</h3>
+          <app-code-block [code]="samples.derivedFullName" lang="ts" filename="derived-state.ts" />
+
+          <p>A chain of derivations is equally natural — salary drives the compensation panel:</p>
+          <app-code-block [code]="samples.derivedCompensation" lang="ts" filename="derived-state.ts" />
+
+          <div class="doc-callout doc-callout--info">
+            <strong>When to use it:</strong> any value that depends on form input and shouldn't be
+            re-derived imperatively.
+            <br /><strong>When NOT to use it:</strong> don't reach for <code>computed()</code> for
+            side effects, and don't compute giant derivations from the whole root value
+            (<code>form().value()</code>) on every keystroke when you only need one field — read the
+            narrowest field that changes.
+          </div>
+
+          <div class="doc-callout doc-callout--tip">
+            <strong>Production tip.</strong> Derived state in a <code>computed()</code> is
+            automatically pure and memoized — perfect for <code>&#64;if</code> guards in templates
+            without extra signals.
+          </div>
+
+          <app-prev-next section="derived-state" />
+        </section>
+
+        <section id="arrays" data-section="arrays" class="doc-section">
+          <div class="doc-heading-row">
+            <h2 class="doc-h2">Arrays &amp; Repeated Fields</h2>
+            <app-copy-link section="arrays" />
+          </div>
+
+          <h3>What is it?</h3>
+          <p>
+            Array fields replace <code>FormArray</code>. An array field is iterable and reactive;
+            per-item rules come from <code>applyEach(arrayPath, itemSchema)</code>. The structure
+            itself (which items exist) is driven by the model signal.
+          </p>
+
+          <h3>Why does it exist?</h3>
+          <p>
+            In Reactive Forms, <code>FormArray</code> forced you to mirror every add/remove into the
+            control tree by hand. Here, adding a skill is a plain array update on the model — the
+            field tree follows automatically.
+          </p>
+
+          <h3>Per-item validation</h3>
+          <app-code-block [code]="samples.arraysSchema" lang="ts" filename="arrays.ts" />
+
+          <h3>Rendering and mutating</h3>
+          <app-code-block [code]="samples.arraysTemplate" lang="html" filename="arrays.html" />
+
+          <app-code-block [code]="samples.arraysMutation" lang="ts" filename="arrays.ts" />
+
+          <div class="doc-callout doc-callout--tip">
+            <strong>Production tip.</strong> Keep items immutable and keyed. In
+            <code>&#64;for (item of form.skills; track $index)</code>, prefer
+            <code>track skill().keyInParent()</code> (the index) when order is the identity — or an
+            <code>id</code> when items can be reordered.
+          </div>
+
+          <div class="doc-callout doc-callout--info">
+            <strong>When to use it:</strong> any repeated group — skills, line items, contacts,
+            tags.
+            <br /><strong>When NOT to use it:</strong> a fixed set of identical fields is not an
+            array; use separate named fields so the schema stays explicit and readable.
+          </div>
+
+          <app-prev-next section="arrays" />
+        </section>
+
+        <section id="availability" data-section="availability" class="doc-section">
+          <div class="doc-heading-row">
+            <h2 class="doc-h2">Disabled · Readonly · Hidden</h2>
+            <app-copy-link section="availability" />
+          </div>
+
+          <h3>What are they?</h3>
+          <p>
+            Three declarative rules that change a field's <em>availability</em>:
+          </p>
+          <ul>
+            <li><code>disabled(path, &#123; when &#125;)</code> — the field cannot be edited and is
+              <strong>excluded</strong> from the form's value, validation, touched and dirty state.</li>
+            <li><code>readonly(path, &#123; when &#125;)</code> — not editable, but still submitted
+              and validated (like the native <code>readonly</code> attribute).</li>
+            <li><code>hidden(path, &#123; when &#125;)</code> — ignored by validation/touched/dirty;
+              you must also remove it from the DOM with <code>&#64;if</code>.</li>
+          </ul>
+
+          <h3>Why do they exist?</h3>
+          <p>
+            Conditional availability was the messiest part of Reactive Forms — disabled logic
+            scattered in subscriptions, race-prone. Declarative <code>when</code> predicates make the
+            intent visible and testable.
+          </p>
+
+          <h3>How do they work?</h3>
+          <app-code-block [code]="samples.availabilityConditional" lang="ts" filename="availability.ts" />
+          <app-code-block [code]="samples.availabilityReadonly" lang="ts" filename="availability.ts" />
+          <app-code-block [code]="samples.availabilityHidden" lang="html" filename="availability.html" />
+
+          <h3>Disabled reasons</h3>
+          <app-code-block [code]="samples.availabilityReasons" lang="ts" filename="availability.ts" />
+
+          <div class="doc-callout doc-callout--info">
+            <strong>Common mistake.</strong> Forgetting that <code>disabled</code> excludes the value
+            from the submitted model. If you need a field that can't be edited but must be saved, use
+            <code>readonly</code>, not <code>disabled</code>.
+          </div>
+
+          <app-prev-next section="availability" />
+        </section>
+
+        <section id="dynamic-fields" data-section="dynamic-fields" class="doc-section">
+          <div class="doc-heading-row">
+            <h2 class="doc-h2">Dynamic &amp; Conditional Fields</h2>
+            <app-copy-link section="dynamic-fields" />
+          </div>
+
+          <h3>What is it?</h3>
+          <p>
+            Fields that appear, disappear or change rules based on other fields: an optional address
+            block, a "company vs individual" contact, a contract end date that only exists for
+            contractors. Signal Forms model this with <em>conditional schemas</em> and
+            <em>optional model branches</em>.
+          </p>
+
+          <h3>Why does it exist?</h3>
+          <p>
+            Reactive Forms handled this with <code>addControl/removeControl</code> plus validator
+            arrays mutated at runtime. Here the rules themselves are conditional, so there is no
+            imperative add/remove choreography.
+          </p>
+
+          <h3>Conditional sections in the template</h3>
+          <app-code-block [code]="samples.dynamicConditionalSections" lang="html" filename="dynamic.html" />
+
+          <h3>Conditional rules with a typed narrowing</h3>
+          <p>
+            <code>applyWhenValue</code> narrows the field's type based on a predicate before applying
+            a schema — perfect for discriminated-union shapes:
+          </p>
+          <app-code-block [code]="samples.dynamicContactType" lang="ts" filename="dynamic.ts" />
+
+          <div class="doc-callout doc-callout--info">
+            <strong>When to use it:</strong> any field whose existence or rules depend on another
+            field's value.
+            <br /><strong>When NOT to use it:</strong> don't hide fields with <code>&#64;if</code> alone
+            and leave their rules running — hidden fields are excluded from validation only if you
+            declare <code>hidden()</code>. Match the template branch with a rule.
+          </div>
+
+          <details class="exercise">
+            <summary><strong>Exercise</strong> — a conditional newsletter field</summary>
+            <p>
+              Add <code>subscribe: boolean</code> to the profile model. When it is true, show and
+              require an <code>email</code> field; when false, the field should not contribute to
+              validation.
+            </p>
+            <details class="solution">
+              <summary>Show solution</summary>
+              <app-code-block [code]="samples.validatorsWhen" lang="ts" filename="solution.ts" />
+              <p>
+                Guard the template with <code>&#64;if (profileForm.subscribe().value())</code> and declare
+                <code>required(p.email, &#123; when: (ctx) => ctx.valueOf(p.subscribe) &#125;)</code>
+                so the field is only validated when subscribed.
+              </p>
+            </details>
+          </details>
+
+          <app-prev-next section="dynamic-fields" />
+        </section>
+
+        <!-- ═══════════════════════ VALIDATION ═══════════════════════ -->
+
+        <section id="basic-validation" data-section="basic-validation" class="doc-section">
+          <div class="doc-heading-row">
+            <h2 class="doc-h2">Built-in Validation Rules</h2>
+            <app-copy-link section="basic-validation" />
+          </div>
+
+          <p>
+            Validation lives in the schema as <em>rules</em>. Each rule knows when to apply and how
+            to build a <code>ValidationError</code> with a <code>message</code>. Rules skip empty
+            values unless they are the <code>required</code> rule.
+          </p>
+
+          <app-code-block [code]="samples.builtinValidation" lang="ts" filename="validation.ts" />
+
+          <p>
+            Rules are composable and repeatable: you can attach several to one field, and reuse the
+            same rule across forms. To restrict a rule to certain conditions, give it a
+            <code>when</code> predicate:
+          </p>
+
+          <app-code-block [code]="samples.validatorsWhen" lang="ts" filename="validation.ts" />
+
+          <h3>Options every built-in rule accepts</h3>
+          <ul>
+            <li><code>message</code> — the user-facing text (an interpolated string or a function).</li>
+            <li><code>when</code> — a <code>(ctx) =&gt; boolean</code> predicate that gates the rule.</li>
+            <li>Rule-specific parameters — <code>min: (ctx, 18)</code>, <code>maxLength: (ctx, 280)</code>, etc.</li>
+          </ul>
+
+          <div class="doc-callout doc-callout--info">
+            <strong>When to use it:</strong> any validation expressible with the built-ins —
+            presence, format, range, length, pattern.
+            <br /><strong>When NOT to use it:</strong> cross-field, async or domain-specific rules —
+            those need <code>validateTree</code>, <code>validateAsync</code> or
+            <code>validateHttp</code> (next sections).
+          </div>
+
+          <app-prev-next section="basic-validation" />
+        </section>
+
+        <section id="custom-validation" data-section="custom-validation" class="doc-section">
+          <div class="doc-heading-row">
+            <h2 class="doc-h2">Custom Validation</h2>
+            <app-copy-link section="custom-validation" />
+          </div>
+
+          <h3>What is it?</h3>
+          <p>
+            <code>validate(path, validator)</code> runs your own function against a single field's
+            value. The function returns <code>null</code> when valid, or a
+            <code>ValidationError</code> with <code>kind</code> and <code>message</code>.
+          </p>
+
+          <h3>Why does it exist?</h3>
+          <p>
+            Business rules rarely fit the built-ins — "rating between 1 and 5 and not equal to your
+            previous rating", "start date within the current fiscal quarter". Custom validators let
+            you encode the rule next to the field and keep a user-facing message in one place.
+          </p>
+
+          <h3>How does it work?</h3>
+          <app-code-block [code]="samples.customValidate" lang="ts" filename="custom-validation.ts" />
+
+          <p>
+            The validator re-runs automatically whenever the field's value (or any
+            <code>ctx.valueOf</code> dependency) changes. Errors are <em>lazy</em>: computed only
+            when someone reads <code>errors()</code> — great for large forms where you don't validate
+            untouched sections.
+          </p>
+
+          <div class="doc-callout doc-callout--info">
+            <strong>When to use it:</strong> per-field business rules that depend on the field's own
+            value.
+            <br /><strong>When NOT to use it:</strong> rules that depend on other fields — use
+            <code>validateTree</code>; rules that need the server — use <code>validateAsync</code> /
+            <code>validateHttp</code>.
+          </div>
+
+          <app-prev-next section="custom-validation" />
+        </section>
+
+        <section id="cross-field-validation" data-section="cross-field-validation" class="doc-section">
+          <div class="doc-heading-row">
+            <h2 class="doc-h2">Cross-field Validation</h2>
+            <app-copy-link section="cross-field-validation" />
+          </div>
+
+          <h3>What is it?</h3>
+          <p>
+            Rules that validate <em>relationships</em> between fields. Where do the errors go? You
+            target them explicitly with <code>fieldTreeOf(path)</code>, so the error appears under
+            the field the user should fix — not just at the form root.
+          </p>
+
+          <h3>Why does it exist?</h3>
+          <p>
+            In Reactive Forms, cross-field checks meant reading <code>formGroup.get(...)</code>
+            inside a validator and hoping you remembered to call
+            <code>updateValueAndValidity</code> on every source. Here dependencies are declared, so
+            re-validation is automatic and precise.
+          </p>
+
+          <h3>How does it work?</h3>
+          <app-code-block [code]="samples.crossFieldValidateTree" lang="ts" filename="cross-field.ts" />
+
+          <p>
+            Access to the surrounding tree is via the <code>ctx</code> object:
+          </p>
+          <ul>
+            <li><code>ctx.fieldTreeOf(path)</code> — a live field accessor, for reading state and targeting errors.</li>
+            <li><code>ctx.valueOf(path)</code> — shorthand for the current value.</li>
+            <li><code>ctx.stateOf(path)</code> — the reactive <code>FieldState</code>.</li>
+          </ul>
+
+          <p>Attaching it to the group, where it can see both fields:</p>
+          <app-code-block [code]="samples.crossFieldEmployees" lang="ts" filename="cross-field.ts" />
+
+          <div class="doc-callout doc-callout--info">
+            <strong>When to use it:</strong> end-date ≥ start-date, password-confirm, "one of the
+            two must be set", discount ≤ price.
+            <br /><strong>When NOT to use it:</strong> keep single-field rules on the field itself;
+            don't use <code>validateTree</code> for what <code>validate</code> already covers.
+          </div>
+
+          <details class="exercise">
+            <summary><strong>Exercise</strong> — discount vs price</summary>
+            <p>
+              Add a rule so a <code>discount</code> can never exceed the <code>price</code>, with the
+              error shown on the <code>discount</code> field.
+            </p>
+            <details class="solution">
+              <summary>Show solution</summary>
+              <p>
+                Attach <code>validateTree</code> to the parent (or to <code>discount</code> with
+                <code>ctx.valueOf(p.price)</code>), and return the error via
+                <code>ctx.fieldTreeOf(p.discount)</code> when <code>discount &gt; price</code>.
+              </p>
+            </details>
+          </details>
+
+          <app-prev-next section="cross-field-validation" />
+        </section>
+
+        <section id="conditional-validation" data-section="conditional-validation" class="doc-section">
+          <div class="doc-heading-row">
+            <h2 class="doc-h2">Conditional Validation</h2>
+            <app-copy-link section="conditional-validation" />
+          </div>
+
+          <h3>What is it?</h3>
+          <p>
+            The same field validated under some conditions and not others: required only for
+            non-EU addresses, length only when a promo code is entered, must-match-pattern only for
+            corporate accounts. Use <code>when</code> on any rule.
+          </p>
+
+          <h3>Why does it exist?</h3>
+          <p>
+            Conditional validators in Reactive Forms were assembled imperatively — subscribe to a
+            control, re-build the validator array, call <code>setValidators</code> +
+            <code>updateValueAndValidity</code>. Here the condition is declarative and the re-run is
+            automatic when the dependency changes.
+          </p>
+
+          <h3>How does it work?</h3>
+          <app-code-block [code]="samples.conditionalValidation" lang="ts" filename="conditional.ts" />
+
+          <p>
+            Because the <code>when</code> predicate reads <code>ctx.valueOf(p.contractType)</code>,
+            the rule re-evaluates whenever that source field changes — no manual triggering.
+          </p>
+
+          <div class="doc-callout doc-callout--info">
+            <strong>When to use it:</strong> any rule whose applicability depends on other fields.
+            <br /><strong>When NOT to use it:</strong> don't gate a rule that is always true — that
+            hides intent. And prefer <code>hidden()</code> + <code>&#64;if</code> for fields that
+            shouldn't exist at all.
+          </div>
+
+          <app-prev-next section="conditional-validation" />
+        </section>
+
+        <section id="async-validation" data-section="async-validation" class="doc-section">
+          <div class="doc-heading-row">
+            <h2 class="doc-h2">Async &amp; Server Validation</h2>
+            <app-copy-link section="async-validation" />
+          </div>
+
+          <h3>What is it?</h3>
+          <p>
+            Two rules for validation that can't be computed locally:
+          </p>
+          <ul>
+            <li><code>validateAsync(path, &#123; debounce, params, factory, onSuccess, onError &#125;)</code>
+              — arbitrary async work (a promise/observable/service call) via a <code>resource</code>.</li>
+            <li><code>validateHttp(path, &#123; debounce, request, onSuccess, onError &#125;)</code>
+              — HTTP calls with the <code>&#64;angular/common/http</code> <code>HttpResourceRequest</code>.</li>
+          </ul>
+
+          <h3>Why does it exist?</h3>
+          <p>
+            Username/email uniqueness, credit checks, VAT lookups, SSO email verification. These
+            demand <em>debouncing</em>, <em>out-of-order response handling</em> (a slow old response
+            must not clobber a fast new one) and a <code>pending()</code> state the UI can render.
+            The built-in machinery handles all three.
+          </p>
+
+          <h3>How does validateAsync work?</h3>
+          <app-code-block [code]="samples.asyncValidation" lang="ts" filename="async-validation.ts" />
+
+          <p>
+            <code>factory</code> receives the resolved <code>params</code> and must return a
+            <code>resource()</code>. The loader performs the check and returns <code>null</code> (ok)
+            or a <code>ValidationError</code>.
+          </p>
+
+          <h3>How does validateHttp work?</h3>
+          <app-code-block [code]="samples.validateHttp" lang="ts" filename="async-validation.ts" />
+
+          <h3>Reacting to pending state</h3>
+          <app-code-block [code]="samples.asyncReaction" lang="html" filename="async-validation.html" />
+
+          <div class="doc-callout doc-callout--info">
+            <strong>When to use it:</strong> server-side truth checks, uniqueness, enrichment.
+            <br /><strong>When NOT to use it:</strong> avoid a server round-trip when the rule is
+            local (it's slow and rate-limited); don't validate every keystroke without a
+            <code>debounce</code>.
+          </div>
+
+          <details class="exercise">
+            <summary><strong>Exercise</strong> — debounce a username check</summary>
+            <p>
+              Add <code>username</code> to the profile, validate uniqueness against
+              <code>api.checkUsername(username)</code> returning <code>true</code> when taken, with a
+              400&nbsp;ms debounce.
+            </p>
+            <details class="solution">
+              <summary>Show solution</summary>
+              <p>
+                Use <code>validateHttp(p.username, &#123; debounce: 400, request: (ctx) =&gt;
+                (&#123; url: '/api/check-username/' + ctx.valueOf(p.username), method: 'GET' &#125;),
+                onSuccess: (ctx, result) =&gt; result.ok ? null : &#123; kind: 'usernameTaken',
+                message: 'That username is taken' &#125; &#125;)</code> — or
+                <code>validateAsync</code> with a <code>resource</code> over the same service call.
+              </p>
+            </details>
+          </details>
+
+          <app-prev-next section="async-validation" />
+        </section>
+
+        <section id="error-display" data-section="error-display" class="doc-section">
+          <div class="doc-heading-row">
+            <h2 class="doc-h2">Error Display &amp; User Feedback</h2>
+            <app-copy-link section="error-display" />
+          </div>
+
+          <h3>What is it?</h3>
+          <p>
+            Errors live on <code>field().errors()</code> as a signal. How and when you show them is a
+            product decision: always, after touch, after submit, or grouped per section.
+          </p>
+
+          <h3>Per-field display</h3>
+          <app-code-block [code]="samples.firstStep7" lang="html" filename="errors.html" />
+
+          <h3>Form-level summary</h3>
+          <app-code-block [code]="samples.formLevelErrors" lang="html" filename="errors.html" />
+
+          <h3>Server errors on submit</h3>
+          <p>
+            The submission action can return errors mapped to fields — each error carries the
+            <code>fieldTree</code> it belongs to, and the form surfaces it on exactly that field:
+          </p>
+          <app-code-block [code]="samples.serverErrorsSubmit" lang="ts" filename="errors.ts" />
+
+          <div class="doc-callout doc-callout--tip">
+            <strong>Production tips.</strong>
+            <ul>
+              <li>Always keep <code>aria-invalid</code> and <code>aria-describedby</code> in sync with
+                the same <code>errors()</code> signal you render.</li>
+              <li>Show the error <em>next to</em> the field AND in a summary; screen-reader users and
+                sighted users should discover the same problem.</li>
+              <li>On submit failure, move focus to the first invalid field
+                (<code>field().focusBoundControl()</code>).</li>
+            </ul>
+          </div>
+
+          <app-prev-next section="error-display" />
+        </section>
+
+        <!-- ═══════════════════════ REAL PROJECTS ═══════════════════════ -->
+
+        <section id="api-integration" data-section="api-integration" class="doc-section">
+          <div class="doc-heading-row">
+            <h2 class="doc-h2">API Integration</h2>
+            <app-copy-link section="api-integration" />
+          </div>
+
+          <h3>What is it?</h3>
+          <p>
+            Wiring the form to a real backend: load on init, save on submit, handle loading and
+            saving states, and map between your domain model and the API's DTO.
+          </p>
+
+          <h3>The three seams</h3>
+          <ol>
+            <li><strong>Loading</strong> — fetch, map DTO → model, write to the model signal.</li>
+            <li><strong>Saving</strong> — the submission action maps model → DTO and calls the API.</li>
+            <li><strong>Server errors</strong> — map API error codes back to fields.</li>
+          </ol>
+
+          <app-code-block [code]="samples.apiDto" lang="ts" filename="api-integration.ts" />
+          <app-code-block [code]="samples.apiCreateEdit" lang="ts" filename="api-integration.ts" />
+          <app-code-block [code]="samples.apiLoadingStates" lang="html" filename="api-integration.html" />
+
+          <app-code-block [code]="samples.apiFlow" lang="diagram" filename="api-integration.diagram" />
+
+          <div class="doc-callout doc-callout--info">
+            <strong>When to use it:</strong> any form backed by a service.
+            <br /><strong>When NOT to use it:</strong> don't couple the schema to the API shape; the
+            schema belongs to the <em>model</em>. Keep mappers as pure functions so they are
+            trivially unit-testable.
+          </div>
+
+          <app-prev-next section="api-integration" />
+        </section>
+
+        <section id="nested-forms" data-section="nested-forms" class="doc-section">
+          <div class="doc-heading-row">
+            <h2 class="doc-h2">Nested Forms</h2>
+            <app-copy-link section="nested-forms" />
+          </div>
+
+          <h3>What is it?</h3>
+          <p>
+            Because the field tree mirrors the model shape, any nested object is naturally a nested
+            group — no manual nesting API required. A <code>personal</code> object is a group field
+            whose children are <code>personal.firstName</code> etc.
+          </p>
+
+          <h3>Why does it exist?</h3>
+          <p>
+            Real forms nest: an employee has personal details, employment details, addresses. In
+            Reactive Forms every level meant another <code>FormGroup</code> wired by hand. Here the
+            tree is derived, so nesting costs nothing.
+          </p>
+
+          <h3>How does it work?</h3>
+          <app-code-block [code]="samples.nestedForms" lang="ts" filename="nested-forms.ts" />
+
+          <p>
+            You still control the <em>shape</em> of the data — pick interfaces that match the
+            domain, and the form follows. For deep or wide forms, extract section components (see
+            Reusable Components).
+          </p>
+
+          <div class="doc-callout doc-callout--info">
+            <strong>When to use it:</strong> any form whose model is more than one level deep —
+            almost always.
+            <br /><strong>When NOT to use it:</strong> don't force artificial nesting on flat data;
+            a flat model yields a flat, readable schema.
+          </div>
+
+          <app-prev-next section="nested-forms" />
+        </section>
+
+        <section id="dynamic-forms" data-section="dynamic-forms" class="doc-section">
+          <div class="doc-heading-row">
+            <h2 class="doc-h2">Dynamic Forms</h2>
+            <app-copy-link section="dynamic-forms" />
+          </div>
+
+          <h3>What is it?</h3>
+          <p>
+            Forms whose <em>structure</em> is not known at compile time: config-driven forms, schema
+            builders, dynamic sections chosen by the user.
+          </p>
+
+          <h3>Two distinct patterns</h3>
+          <p>
+            <strong>1. Data-driven structure (recommended).</strong> The model shape is fixed; what
+            varies is which branches are present and how many items an array has. Conditional
+            schemas (<code>applyWhen</code>, <code>applyWhenValue</code>) + arrays cover this with
+            full typing.
+          </p>
+          <app-code-block [code]="samples.configDriven" lang="ts" filename="dynamic-forms.ts" />
+
+          <p>
+            <strong>2. Metadata-driven rendering (last resort).</strong> A configuration describes
+            fields and the template renders them generically. This is powerful but sacrifices
+            type-safety and readability — you trade the compiler for indirection.
+          </p>
+          <app-code-block [code]="samples.configOverengineering" lang="ts" filename="dynamic-forms.ts" />
+
+          <div class="doc-callout doc-callout--info">
+            <strong>When to use it:</strong> data-driven structure for "same form, different
+            branch" needs.
+            <br /><strong>When NOT to use it:</strong> don't build a metadata-driven form engine for
+            a fixed form — it's over-engineering and harder to maintain than the direct schema.
+          </div>
+
+          <app-prev-next section="dynamic-forms" />
+        </section>
+
+        <section id="reusable-components" data-section="reusable-components" class="doc-section">
+          <div class="doc-heading-row">
+            <h2 class="doc-h2">Reusable Field Components</h2>
+            <app-copy-link section="reusable-components" />
+          </div>
+
+          <h3>What is it?</h3>
+          <p>
+            Custom controls that work with <code>[formField]</code>: a styled text input, a select,
+            a toggle, a date picker. The contract is tiny — implement
+            <code>FormValueControl</code> (or <code>FormCheckboxControl</code>) and the directive
+            drives it. No <code>ControlValueAccessor</code> required for new code.
+          </p>
+
+          <h3>The contract</h3>
+          <app-code-block [code]="samples.reusableContract" lang="ts" filename="field-components.ts" />
+
+          <h3>A concrete text field</h3>
+          <app-code-block [code]="samples.reusableTextField" lang="ts" filename="text-field.ts" />
+          <app-code-block [code]="samples.reusableUsage" lang="html" filename="usage.html" />
+
+          <h3>A checkbox control</h3>
+          <app-code-block [code]="samples.reusableCheckbox" lang="ts" filename="toggle.ts" />
+
+          <h3>What about existing CVA-based controls?</h3>
+          <app-code-block [code]="samples.cva" lang="ts" filename="cva.ts" />
+
+          <p>
+            <code>[formField]</code> resolves bindings in priority order: native element → custom
+            control (<code>FormValueControl</code>) → <code>ControlValueAccessor</code>. So third
+            party CVA components keep working, but your own controls should use the modern contract.
+          </p>
+
+          <div class="doc-callout doc-callout--info">
+            <strong>When to use it:</strong> any repeated control UI — inputs, selects, toggles,
+            pickers, chips.
+            <br /><strong>When NOT to use it:</strong> don't wrap a native input in a component with
+            no extra behavior; a raw <code>[formField]</code> input is already fine.
+          </div>
+
+          <app-prev-next section="reusable-components" />
+        </section>
+
+        <!-- ═══════════════════════ ENTERPRISE PATTERNS ═══════════════════════ -->
+
+        <section id="component-architecture" data-section="component-architecture" class="doc-section">
+          <div class="doc-heading-row">
+            <h2 class="doc-h2">Component Architecture</h2>
+            <app-copy-link section="component-architecture" />
+          </div>
+
+          <h3>What is it?</h3>
+          <p>
+            Where the model signal lives, who creates the field tree, and how section components get
+            their fields. The rules of thumb:
+          </p>
+          <ul>
+            <li><strong>One owner.</strong> The component that owns the model signal also owns
+              <code>form()</code> and the schema.</li>
+            <li><strong>Pass fields down, not models.</strong> Sections receive the exact field
+              accessors they need (a group field), keeping their inputs narrow and testable.</li>
+            <li><strong>Emit semantic events up.</strong> Sections emit things like
+              <code>addSkill</code>, never raw form state mutations — the parent owns mutations.</li>
+            <li><strong>Schema in its own file.</strong> <code>*.schema.ts</code>, unit-testable in
+              isolation.</li>
+          </ul>
+
+          <app-code-block [code]="samples.architecture" lang="ts" filename="architecture.ts" />
+
+          <app-code-block [code]="samples.architectureWhy" lang="diagram" filename="architecture.diagram" />
+
+          <div class="doc-callout doc-callout--info">
+            <strong>When to use it:</strong> every form bigger than one screen, and any form with
+            more than ~6 fields.
+            <br /><strong>When NOT to use it:</strong> tiny inline forms can stay in one component —
+            splitting adds ceremony with no benefit.
+          </div>
+
+          <app-prev-next section="component-architecture" />
+        </section>
+
+        <section id="rxjs-integration" data-section="rxjs-integration" class="doc-section">
+          <div class="doc-heading-row">
+            <h2 class="doc-h2">RxJS Integration</h2>
+            <app-copy-link section="rxjs-integration" />
+          </div>
+
+          <h3>What is it?</h3>
+          <p>
+            Signal Forms are signals, not streams — but real apps already use RxJS (websockets,
+            route params, API libraries, NgRx). Integration means translating between the two
+            worlds deliberately, not calling <code>toSignal</code> on everything.
+          </p>
+
+          <h3>Why does it exist?</h3>
+          <p>
+            You can't subscribe inside a <code>computed()</code>, and you shouldn't sprinkle
+            subscriptions across components. A small, explicit bridge — one source of truth — beats
+            ad-hoc wiring.
+          </p>
+
+          <h3>Watching a field with toObservable</h3>
+          <app-code-block [code]="samples.rxjsBridge" lang="ts" filename="rxjs.ts" />
+
+          <h3>Autocomplete / debounced search</h3>
+          <app-code-block [code]="samples.rxjsAutocomplete" lang="ts" filename="rxjs.ts" />
+
+          <h3>Debounced cross-field validation</h3>
+          <app-code-block [code]="samples.rxjsDebouncedValidation" lang="ts" filename="rxjs.ts" />
+
+          <h3>Dependent dropdowns</h3>
+          <app-code-block [code]="samples.rxjsDependentDropdowns" lang="ts" filename="rxjs.ts" />
+
+          <h3>Mixing signals and streams</h3>
+          <app-code-block [code]="samples.rxjsMixing" lang="ts" filename="rxjs.ts" />
+
+          <div class="doc-callout doc-callout--info">
+            <strong>When to use it:</strong> any stream source that must drive or react to the form.
+            <br /><strong>When NOT to use it:</strong> don't re-create form logic in RxJS when the
+            schema already handles it — <code>validateHttp</code> and <code>validateAsync</code>
+            replace a lot of hand-rolled streams.
+          </div>
+
+          <app-prev-next section="rxjs-integration" />
+        </section>
+
+        <section id="state-management" data-section="state-management" class="doc-section">
+          <div class="doc-heading-row">
+            <h2 class="doc-h2">State Management</h2>
+            <app-copy-link section="state-management" />
+          </div>
+
+          <h3>What is it?</h3>
+          <p>
+            Where form state sits relative to app state. Signal Forms work great standalone; they
+            also coexist with NgRx and other stores. The question is <em>who owns what</em>.
+          </p>
+
+          <h3>The split that works</h3>
+          <ul>
+            <li><strong>Store owns</strong>: entity data, auth, global loading/error, "which item is being edited".</li>
+            <li><strong>Form owns</strong>: the editing draft, per-field validity, touched/dirty, pending.</li>
+            <li><strong>The boundary</strong>: load from the store into the model signal on init;
+              write the model signal back to the store on a deliberate action (Save).</li>
+          </ul>
+
+          <app-code-block [code]="samples.ngrxLayers" lang="ts" filename="state-management.ts" />
+
+          <p>Feeding the store from the form (only when it matters):</p>
+          <app-code-block [code]="samples.ngrxLoad" lang="ts" filename="state-management.ts" />
+          <app-code-block [code]="samples.ngrxStore" lang="ts" filename="state-management.ts" />
+
+          <div class="doc-callout doc-callout--info">
+            <strong>When to use it:</strong> apps with a store, or forms that must share drafts
+            across routes.
+            <br /><strong>When NOT to use it:</strong> don't dispatch per keystroke — the store
+            doesn't need every intermediate edit; save on submit or on a debounced "persist draft".
+          </div>
+
+          <app-prev-next section="state-management" />
+        </section>
+
+        <section id="performance" data-section="performance" class="doc-section">
+          <div class="doc-heading-row">
+            <h2 class="doc-h2">Performance</h2>
+            <app-copy-link section="performance" />
+          </div>
+
+          <h3>What is it?</h3>
+          <p>
+            Large forms (hundreds of fields, long arrays, heavy async validators) still need care.
+            Signal Forms give you fine-grained reactivity for free, but you can still pay
+            unnecessary costs.
+          </p>
+
+          <h3>The baseline — what's already fine</h3>
+          <app-code-block [code]="samples.performanceFine" lang="ts" filename="performance.ts" />
+
+          <h3>What to avoid</h3>
+          <app-code-block [code]="samples.performanceAvoid" lang="ts" filename="performance.ts" />
+
+          <h3>Large arrays</h3>
+          <app-code-block [code]="samples.performanceArrays" lang="ts" filename="performance.ts" />
+
+          <h3>Validator costs</h3>
+          <app-code-block [code]="samples.performanceValidators" lang="ts" filename="performance.ts" />
+
+          <h3>Effects</h3>
+          <app-code-block [code]="samples.performanceEffects" lang="ts" filename="performance.ts" />
+
+          <div class="doc-callout doc-callout--tip">
+            <strong>Production tips.</strong>
+            <ul>
+              <li>Read the narrowest field, not the whole root, inside templates and computed values.</li>
+              <li>Keep array items immutable and tracked by stable keys.</li>
+              <li>Debounce async validators; cancel in-flight requests on change.</li>
+              <li>Virtualize only when rendering <em>hundreds</em> of visible items.</li>
+            </ul>
+          </div>
+
+          <app-prev-next section="performance" />
+        </section>
+
+        <section id="accessibility" data-section="accessibility" class="doc-section">
+          <div class="doc-heading-row">
+            <h2 class="doc-h2">Accessibility</h2>
+            <app-copy-link section="accessibility" />
+          </div>
+
+          <h3>What is it?</h3>
+          <p>
+            Signal Forms don't auto-fix accessibility — they give you the <em>signals</em> to wire it
+            correctly. The essentials:
+          </p>
+          <ul>
+            <li><code>aria-invalid</code> from the same <code>errors()</code> you render.</li>
+            <li><code>aria-describedby</code> pointing at the visible message.</li>
+            <li>Labels tied to controls; errors announced when they appear.</li>
+            <li>Focus management on validation failure and dynamic sections.</li>
+          </ul>
+
+          <app-code-block [code]="samples.a11yBasics" lang="html" filename="a11y.html" />
+
+          <h3>Live region for errors</h3>
+          <app-code-block [code]="samples.a11yDynamic" lang="html" filename="a11y.html" />
+
+          <h3>Focus after failed submit</h3>
+          <app-code-block [code]="samples.a11yFocus" lang="ts" filename="a11y.ts" />
+
+          <div class="doc-callout doc-callout--tip">
+            <strong>Production tips.</strong> Test with a screen reader, not just color. Keep visible
+            focus styles. Announce form <em>saving</em> state via a live region too — not just
+            errors.
+          </div>
+
+          <app-prev-next section="accessibility" />
+        </section>
+
+        <section id="testing" data-section="testing" class="doc-section">
+          <div class="doc-heading-row">
+            <h2 class="doc-h2">Testing</h2>
+            <app-copy-link section="testing" />
+          </div>
+
+          <h3>What is it?</h3>
+          <p>
+            Three levels: pure unit tests of schemas and mappers (no Angular needed), component
+            tests of fields + templates, and E2E flows for the critical journeys.
+          </p>
+
+          <h3>Schema tests — pure and fast</h3>
+          <app-code-block [code]="samples.testingUnit" lang="ts" filename="schema.spec.ts" />
+
+          <h3>Component tests</h3>
+          <app-code-block [code]="samples.testingComponent" lang="ts" filename="profile.component.spec.ts" />
+
+          <h3>E2E — keep it to the happy path + one failure</h3>
+          <app-code-block [code]="samples.testingE2e" lang="ts" filename="profile.e2e.ts" />
+
+          <div class="doc-callout doc-callout--info">
+            <strong>When to use it:</strong> schema tests for every conditional/async rule; component
+            tests for field binding and error display; E2E for signup/checkout-grade journeys.
+            <br /><strong>When NOT to use it:</strong> don't assert on internal signals (
+            <code>profileForm.foo().bar()</code> internals) — test behavior through the rendered UI
+            or the public schema.
+          </div>
+
+          <app-prev-next section="testing" />
+        </section>
+
+        <section id="migration" data-section="migration" class="doc-section">
+          <div class="doc-heading-row">
+            <h2 class="doc-h2">Migration Guide</h2>
+            <app-copy-link section="migration" />
+          </div>
+
+          <h3>What is it?</h3>
+          <p>
+            Moving an existing form to Signal Forms. There is no automated codemod for logic — but
+            the pattern is mechanical, and you can migrate form by form.
+          </p>
+
+          <h3>Step 1 — Inventory</h3>
+          <app-code-block [code]="samples.migrationStart" lang="ts" filename="migration.ts" />
+
+          <h3>Step 2 — Model signal + form()</h3>
+          <app-code-block [code]="samples.migrationStep1" lang="ts" filename="migration.ts" />
+
+          <h3>Step 3 — Port validators</h3>
+          <app-code-block [code]="samples.migrationStep2" lang="ts" filename="migration.ts" />
+
+          <h3>Step 4 — Rewrite bindings</h3>
+          <app-code-block [code]="samples.migrationStep3" lang="html" filename="migration.html" />
+
+          <h3>The mapping table</h3>
+          <app-code-block [code]="samples.migrationMapping" lang="ts" filename="migration.ts" />
+
+          <h3>Redesign while you migrate</h3>
+          <p>
+            Since you're touching every line anyway, this is the moment to split a monolith into
+            section components and move the schema into its own file:
+          </p>
+          <app-code-block [code]="samples.migrationRedesign" lang="ts" filename="migration.ts" />
+
+          <h3>When NOT to migrate</h3>
+          <app-code-block [code]="samples.migrationWhenNot" lang="text" filename="migration.md" />
+
+          <app-prev-next section="migration" />
+        </section>
+
+        <!-- ═══════════════════════ WORKSHOP ═══════════════════════ -->
+
+        <section id="employee-management-form" data-section="employee-management-form" class="doc-section">
+          <div class="doc-heading-row">
+            <h2 class="doc-h2">Workshop: Employee Management Form</h2>
+            <app-copy-link section="employee-management-form" />
+          </div>
+
+          <p>
+            Everything so far, in one production-grade example. The
+            <strong>Employee Management Form</strong> combines nested sections, conditional
+            validation, cross-field rules, async uniqueness, arrays, reusable field components and a
+            mock API — the same architecture we'd ship to production.
+          </p>
+
+          <h3>The domain model</h3>
+          <app-code-block [code]="samples.empModel" lang="ts" filename="employee.model.ts" />
+
+          <h3>The schema — every pattern at once</h3>
+          <app-code-block [code]="samples.empSchema" lang="ts" filename="employee.schema.ts" />
+
+          <h3>The form component</h3>
+          <app-code-block [code]="samples.empFormComponent" lang="ts" filename="employee-form.component.ts" />
+
+          <h3>The form template</h3>
+          <app-code-block [code]="samples.empFormTemplate" lang="html" filename="employee-form.component.html" />
+
+          <h3>Reusable field components</h3>
+          <app-code-block [code]="samples.empTextField" lang="ts" filename="components/app-text-field.ts" />
+          <app-code-block [code]="samples.empSelectField" lang="ts" filename="components/app-select-field.ts" />
+
+          <h3>Section components</h3>
+          <app-code-block [code]="samples.empPersonalSection" lang="ts" filename="components/personal-details-section.ts" />
+          <app-code-block [code]="samples.empSkillsSection" lang="ts" filename="components/skills-section.ts" />
+
+          <h3>Run it live</h3>
+          <p>
+            This is the same component compiled into this page. Load employee&nbsp;7, then try:
+          </p>
+          <ul>
+            <li>Clear the email → async uniqueness check runs (debounced, pending state visible).</li>
+            <li>Set contract type to <em>Contractor</em> → a required <code>contractEndDate</code> appears.</li>
+            <li>Set an end date before the start date → cross-field error lands on <code>endDate</code>.</li>
+            <li>Add skills; try an empty skill name → per-item <code>applyEach</code> validation.</li>
+            <li>Submit with errors → focus jumps to the first invalid field and a summary appears.</li>
+          </ul>
+
+          <app-employee-form [employeeId]="7" />
+
+          <details class="exercise">
+            <summary><strong>Workshop exercise</strong> — add a department transfer</summary>
+            <ul>
+              <li>Add a <code>transferDate</code> to the model that appears (and is required) only
+                when <code>department</code> differs from the loaded employee's original department.</li>
+              <li>Add an async check that <code>email</code> is not used by any employee besides the
+                current one.</li>
+            </ul>
+            <details class="solution">
+              <summary>Show solution</summary>
+              <p>
+                Use <code>hidden(p.transferDate, &#123; when: (ctx) =&gt; ctx.valueOf(p.department) ===
+                originalDepartment &#125;)</code> plus <code>required(p.transferDate, &#123; when: … &#125;)</code>
+                mirroring the condition; and a <code>validateHttp</code>/<code>validateAsync</code>
+                rule on <code>p.email</code> that queries the API excluding the current
+                <code>employeeId</code>. Keep the original department in a read-only field of the
+                model so the schema stays pure.
+              </p>
+            </details>
+          </details>
+
+          <app-prev-next section="employee-management-form" />
+        </section>
+<!-- ═══════════════════════ REFERENCE ═══════════════════════ -->
+
+        <section id="common-mistakes" data-section="common-mistakes" class="doc-section">
+          <div class="doc-heading-row">
+            <h2 class="doc-h2">Common Mistakes</h2>
+            <app-copy-link section="common-mistakes" />
+          </div>
+
+          <p>Each anti-pattern, why it looks reasonable, and the fix.</p>
+
+          <h3>1 · Form inside the component</h3>
+          <app-code-block [code]="samples.mistakeSignalFormInsideComponent" lang="ts" filename="mistakes.ts" />
+          <p>Fix: create the model + <code>form()</code> at the top of the component (field initializer), or own it in a facade.</p>
+
+          <h3>2 · Reading the wrong signal</h3>
+          <app-code-block [code]="samples.mistakeReadingWrongSignal" lang="ts" filename="mistakes.ts" />
+
+          <h3>3 · Redundant model signals</h3>
+          <app-code-block [code]="samples.mistakeRedundantModel" lang="ts" filename="mistakes.ts" />
+
+          <h3>4 · Subscribing inside an effect</h3>
+          <app-code-block [code]="samples.mistakeSubscribeInEffect" lang="ts" filename="mistakes.ts" />
+
+          <h3>5 · Storing every keystroke in the store</h3>
+          <app-code-block [code]="samples.mistakeStoreEveryKeystroke" lang="ts" filename="mistakes.ts" />
+
+          <h3>6 · Breaking array immutability</h3>
+          <app-code-block [code]="samples.mistakeImmutabilityOfArrays" lang="ts" filename="mistakes.ts" />
+
+          <h3>7 · Blocking the whole tree with one validator</h3>
+          <app-code-block [code]="samples.mistakeBlockingValidation" lang="ts" filename="mistakes.ts" />
+
+          <h3>8 · Shared mutable state inside the schema</h3>
+          <app-code-block [code]="samples.mistakeSharedSchemaState" lang="ts" filename="mistakes.ts" />
+
+          <h3>9 · Async validator on every keystroke</h3>
+          <app-code-block [code]="samples.mistakeAsyncValidatorPerKeystroke" lang="ts" filename="mistakes.ts" />
+
+          <h3>10 · Ignoring pending state</h3>
+          <app-code-block [code]="samples.mistakeIgnoringPending" lang="ts" filename="mistakes.ts" />
+
+          <h3>11 · Error display hacks</h3>
+          <app-code-block [code]="samples.mistakeErrorDisplay" lang="ts" filename="mistakes.ts" />
+
+          <h3>12 · One giant template</h3>
+          <app-code-block [code]="samples.mistakeHugeTemplate" lang="ts" filename="mistakes.ts" />
+
+          <app-prev-next section="common-mistakes" />
+        </section>
+
+        <section id="cheat-sheet" data-section="cheat-sheet" class="doc-section">
+          <div class="doc-heading-row">
+            <h2 class="doc-h2">Cheat Sheet</h2>
+            <app-copy-link section="cheat-sheet" />
+          </div>
+
+          <h3>Decision table</h3>
+          <app-code-block [code]="samples.cheatDecision" lang="text" filename="cheat-sheet.txt" />
+
+          <h3>Quick API reference</h3>
+          <table class="doc-table">
+            <thead>
+              <tr><th>Task</th><th>API</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Create a form</td><td><code>form(modelSignal, schema?, options?)</code></td></tr>
+              <tr><td>Read a value</td><td><code>form.name().value()</code></td></tr>
+              <tr><td>Write a value</td><td><code>form.name().value.set('x')</code> or <code>model.update(...)</code></td></tr>
+              <tr><td>Validate</td><td><code>required / email / min / max / minLength / maxLength / pattern / minDate / maxDate</code></td></tr>
+              <tr><td>Custom rule</td><td><code>validate(path, validator)</code></td></tr>
+              <tr><td>Cross-field rule</td><td><code>validateTree(path, fn)</code> + <code>ctx.fieldTreeOf / ctx.valueOf</code></td></tr>
+              <tr><td>Async rule</td><td><code>validateAsync(path, &#123; params, factory, onSuccess &#125;)</code></td></tr>
+              <tr><td>HTTP rule</td><td><code>validateHttp(path, &#123; request, onSuccess &#125;)</code></td></tr>
+              <tr><td>Conditional rule</td><td><code>&#123; when: (ctx) =&gt; boolean &#125;</code> on any rule</td></tr>
+              <tr><td>Disable / readonly / hide</td><td><code>disabled / readonly / hidden</code> with <code>when</code></td></tr>
+              <tr><td>Repeated items</td><td><code>applyEach(path, itemSchema)</code> + iterate the array field</td></tr>
+              <tr><td>Bind a field</td><td><code>[formField]</code> on native or custom control</td></tr>
+              <tr><td>Submit</td><td><code>[formRoot]</code> on <code>&lt;form&gt;</code> + <code>submission.action</code></td></tr>
+              <tr><td>Focus first error</td><td><code>form().errorSummary()[0].fieldTree()?.focusBoundControl()</code></td></tr>
+              <tr><td>Status classes</td><td><code>provideSignalFormsConfig(&#123; classes &#125;)</code></td></tr>
+            </tbody>
+          </table>
+
+          <app-prev-next section="cheat-sheet" />
+        </section>
+
+        <section id="learning-path" data-section="learning-path" class="doc-section">
+          <div class="doc-heading-row">
+            <h2 class="doc-h2">Learning Path &amp; Next Steps</h2>
+            <app-copy-link section="learning-path" />
+          </div>
+
+          <p>If you made it here, you can build production Signal Forms. A suggested order to apply it:</p>
+
+          <ol class="learning-path">
+            <li><strong>Rebuild one small form</strong> you already own (profile, settings) with <code>form()</code> + <code>[formField]</code>.</li>
+            <li><strong>Add real validation</strong> — move every validator into a <code>*.schema.ts</code> file.</li>
+            <li><strong>Split a monolith</strong> into presentational section components receiving field inputs.</li>
+            <li><strong>Add one cross-field rule</strong> and one async rule with <code>validateTree</code> / <code>validateAsync</code>.</li>
+            <li><strong>Build a reusable control</strong> with <code>FormValueControl</code> and reuse it in two places.</li>
+            <li><strong>Test the schema</strong> in isolation and the binding in a component test.</li>
+            <li><strong>Migrate one real form</strong> end-to-end using the Migration section.</li>
+          </ol>
+
+          <h3>Deep-dive ideas</h3>
+          <ul>
+            <li>Dynamic schema builders (<code>applyWhen</code>, <code>applyWhenValue</code>) for config-driven workflows.</li>
+            <li><code>validateHttp</code> vs a shared <code>httpResource</code> for cacheable lookups.</li>
+            <li>Multi-step wizard: one model signal + step sections + per-step schema rules.</li>
+            <li>WebMCP tool registration (<code>provideExperimentalWebMcpForms</code> — experimental, label it).</li>
+            <li>Performance profiling of a 500-field form with the DevTools profiler.</li>
+          </ul>
+
+          <details class="exercise">
+            <summary><strong>Final exercise</strong> — combine everything</summary>
+            <p>
+              Build a small "Project" form: title (required, 3–80 chars), owner (required select),
+              a <code>budget</code> optional number that becomes required when
+              <code>funded</code> is toggled, an async check that the title is unique, and a
+              <code>tasks</code> array (applyEach with name + estimate). Wire a mock save that
+              returns a server error on a specific task. That is the full signal-form toolbox.
+            </p>
+            <details class="solution">
+              <summary>Show solution sketch</summary>
+              <app-code-block [code]="samples.exerciseNotes" lang="ts" filename="project-solution.ts" />
+              <p>
+                Compose: <code>required(p.title, &#123; minLength: … &#125;)</code> +
+                <code>validateAsync(p.title, …)</code> for uniqueness; conditional
+                <code>required(p.budget, &#123; when: (ctx) =&gt; ctx.valueOf(p.funded) &#125;)</code>;
+                <code>applyEach(p.tasks, taskSchema)</code>; and a <code>submission.action</code> that
+                returns a <code>fieldTree</code>-targeted error against <code>p.tasks[index].name</code>.
+              </p>
+            </details>
+          </details>
+
+          <div class="doc-callout doc-callout--tip">
+            <strong>Done?</strong> You now own the mental model, the schema API, async &amp; cross-field
+            validation, reusable components, enterprise architecture, RxJS/NgRx integration,
+            performance and accessibility. Ship it.
+          </div>
+
+          <app-prev-next section="learning-path" />
+        </section>
+
+      </div>
+
+      <footer class="doc-footer">
+        <p>
+          Angular Signal Forms tutorial · built for <code>@angular/forms</code> 22.x ·
+          <a href="#top">Back to top ↑</a>
+        </p>
+      </footer>
+    </main>
+  </div>
+</div>

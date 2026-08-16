@@ -1,0 +1,52 @@
+<form [formRoot]="employeeForm" novalidate class="employee-form">
+  @if (serverError(); as error) {
+    <div class="form-banner form-banner--error" role="alert">
+      <strong>Could not save.</strong> {{ error }}
+    </div>
+  }
+
+  @if (loading()) {
+    <p class="muted" aria-live="polite">Loading employee…</p>
+  }
+
+  <app-personal-details [form]="employeeForm" />
+  <app-employment-details [form]="employeeForm" />
+  <app-address-section [form]="employeeForm" />
+  <app-skills-section [form]="employeeForm" [model]="employeeModel" />
+  <app-emergency-contact-section [form]="employeeForm" />
+
+  <app-form-section title="Status" description="Whether this employee is currently active.">
+    <app-toggle [formField]="employeeForm.active" label="Active employee" hint="Inactive employees are excluded from scheduling and payroll." />
+  </app-form-section>
+
+  <div class="employee-form__footer">
+    <div class="employee-form__status" aria-live="polite">
+      @if (employeeForm().submitting()) {
+        <span class="pill pill--pending">Submitting…</span>
+      } @else if (employeeForm().invalid()) {
+        <span class="pill pill--invalid">Invalid — {{ employeeForm().errorSummary().length }} issue(s)</span>
+      } @else {
+        <span class="pill pill--ok">Ready to save</span>
+      }
+    </div>
+
+    <div class="employee-form__actions">
+      <button type="button" class="btn btn--ghost" (click)="resetForm()">Reset</button>
+      <button
+        type="submit"
+        class="btn btn--primary"
+        [disabled]="employeeForm().submitting() || employeeForm().invalid()"
+      >
+        @if (employeeForm().submitting()) {
+          Saving…
+        } @else {
+          Save employee
+        }
+      </button>
+    </div>
+  </div>
+
+  @if (saved()) {
+    <p class="form-success" role="status">Saved successfully. ✨</p>
+  }
+</form>
